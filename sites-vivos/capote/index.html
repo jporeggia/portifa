@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capote</title>
+<meta name="description" content="Capote: novo disco “não foi como imaginei”, lançamento em 15 de janeiro.">
+<meta name="theme-color" content="#FF3838">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<script type="application/json" id="estado">
+{
+  "lang": "pt",
+  "banda": "Capote",
+  "logo": "img/logo.webp",
+  "preSave": "",
+  "disco": {
+    "titulo": "não foi como imaginei",
+    "lancamento": "2027-01-15T00:00:00-03:00",
+    "depois": "já saiu"
+  },
+  "merch": {
+    "titulo": "merch",
+    "produtos": [
+      {"slug": "camiseta", "nome": "camiseta - nfci", "preco": "R$ 85,00", "valor": 85, "opcoes": {"rotulo": "tamanho", "itens": ["P", "M", "G", "GG"]}, "fotos": [
+        {"src": "img/camiseta-frente.webp", "alt": "Camiseta preta estonada, frente com arte do disco"},
+        {"src": "img/camiseta-costas.webp", "alt": "Costas da camiseta com a lista de faixas do disco"}
+      ]},
+      {"slug": "cd", "nome": "não foi como imaginei cd", "preco": "R$ 60,00", "valor": 60, "fotos": [
+        {"src": "img/cd.webp", "alt": "CD do disco “não foi como imaginei” na caixa"}
+      ]},
+      {"slug": "poster", "nome": "poster nfci", "preco": "R$ 40,00", "valor": 40, "fotos": [
+        {"src": "img/poster.webp", "alt": "Pôster vermelho do disco emoldurado, encostado na parede"}
+      ]}
+    ]
+  },
+  "compra": {
+    "frete": 18,
+    "adicionar": "adicionar à sacola",
+    "sacola": "sacola",
+    "vazia": "sua sacola está vazia. escolha alguma coisa no merch.",
+    "botao": "finalizar compra",
+    "aviso": "simulação: nenhum pagamento é feito e nenhum dado é enviado.",
+    "pagamentos": ["pix", "cartão de crédito", "boleto"],
+    "obrigado": "pedido recebido",
+    "obrigadoTexto": "obrigado pela compra. você vai receber a confirmação e o código de rastreio no seu e-mail."
+  },
+  "datas": {
+    "titulo": "datas",
+    "botao": "ingressos",
+    "shows": [
+      {"data": "2027-01-15T21:00:00-03:00", "local": "Galpão 12", "cidade": "São Paulo, SP", "ingresso": "https://www.sympla.com.br/", "status": ""},
+      {"data": "2027-01-22T20:00:00-03:00", "local": "Teatro da Praça", "cidade": "Curitiba, PR", "ingresso": "https://www.sympla.com.br/", "status": ""},
+      {"data": "2027-01-23T22:00:00-03:00", "local": "Clube Aurora", "cidade": "Porto Alegre, RS", "ingresso": "https://www.sympla.com.br/", "status": "esgotado"},
+      {"data": "2027-02-05T21:00:00-03:00", "local": "Casa Azul", "cidade": "Belo Horizonte, MG", "ingresso": "https://www.sympla.com.br/", "status": ""},
+      {"data": "2027-02-06T21:00:00-03:00", "local": "Estúdio Sete", "cidade": "Rio de Janeiro, RJ", "ingresso": "https://www.sympla.com.br/", "status": ""},
+      {"data": "2027-02-19T20:30:00-03:00", "local": "Cine Vitória", "cidade": "Recife, PE", "ingresso": "", "status": "em breve"},
+      {"data": "2027-02-27T21:00:00-03:00", "local": "Armazém 4", "cidade": "Florianópolis, SC", "ingresso": "https://www.sympla.com.br/", "status": ""}
+    ]
+  },
+  "nav": [
+    {"rotulo": "merch", "href": "#merch"},
+    {"rotulo": "datas", "href": "#datas"},
+    {"rotulo": "pre-save", "preSave": true, "destaque": true}
+  ],
+  "redes": [
+    {"rede": "instagram", "rotulo": "Instagram", "href": "https://www.instagram.com/capotebnd/"},
+    {"rede": "spotify", "rotulo": "Spotify", "href": "https://open.spotify.com/intl-pt/artist/42o0MSN39FoXyQCNqXG1QG"},
+    {"rede": "apple", "rotulo": "Apple Music", "href": "https://music.apple.com/br/artist/capote/1714921314"}
+  ]
+}
+</script>
+<canvas id="grao" aria-hidden="true"></canvas>
+<div id="app"></div>
+<script src="js/main.js"></script>
+</body>
+</html>

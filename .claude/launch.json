@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "portfolio-v3",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["build/serve.py", "8105"],
+      "port": 8105
+    }
+  ]
+}

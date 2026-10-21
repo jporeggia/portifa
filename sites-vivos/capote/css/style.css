@@ -1,0 +1,541 @@
+/*
+  Capote — site do disco "não foi como imaginei".
+  Tudo vem do Figma "Site_Capote.fig", frames "Front" e "Merch" (1440 × 907 cada):
+  fundo #FF3838, tinta #EEE9C3, Helvetica Neue Light, margem lateral de 104 px.
+  Toda medida é "N px do Figma" × --px. O --px acompanha a largura da janela até 1440 px e
+  ali para, em 85% do Figma: em telas maiores nada cresce, só sobra margem dos lados e o
+  conteúdo fica centralizado numa coluna com a largura do quadro do Figma (1232 × --px).
+  O gesto próprio do site é o grão animado (js/main.js, canvas#grao): fica no fundo e,
+  na front, por cima do título; fotos e textos ficam limpos, acima dele.
+  A página de compra e a de datas não têm frame no Figma: seguem a mesma linguagem (tinta sobre
+  o vermelho, fios finos). Nas datas, o foco do título da front vira o gesto da rolagem: o show
+  do meio da tela fica nítido e os outros embaçam, e o placar gira como o contador.
+*/
+
+/* Helvetica Neue é paga e não está no Google Fonts: quem tem instalada (Mac, e quem
+   instalou no Windows) vê a original; os outros veem Inter Tight, a mais próxima. */
+@font-face {
+  font-family: "Capote Helvetica";
+  font-weight: 300;
+  src: local("Helvetica Neue Light"), local("HelveticaNeue-Light"), local("Helvetica Neue");
+}
+@font-face {
+  font-family: "Capote Helvetica";
+  font-weight: 700;
+  src: local("Helvetica Neue Bold"), local("HelveticaNeue-Bold");
+}
+
+:root {
+  --fundo: #FF3838;
+  --tinta: #EEE9C3;
+  --fonte: "Capote Helvetica", "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+
+  --px: clamp(.6px, calc(100vw / 1440 * .85), .85px); /* 1 px do Figma na tela */
+  /* margem: a do Figma (104) ou, em tela larga, o que centraliza a coluna de 1232 */
+  --gutter: max(clamp(16px, 7.22vw, calc(104 * var(--px))), calc((100vw - 1232 * var(--px)) / 2));
+  --topo: max(20px, calc(59 * var(--px)));
+  --base: max(28px, calc(76 * var(--px)));   /* 907 − 831, distância dos ícones até o pé */
+  --logo: max(96px, calc(140 * var(--px)));
+  --menu: max(16px, calc(25.83 * var(--px)));
+  --titulo: max(40px, calc(142.76 * var(--px)));
+  --icone: max(22px, calc(29 * var(--px)));
+  --loja: max(52px, calc(109.05 * var(--px))); /* título "merch" e "datas" */
+  --nome: max(15px, calc(26 * var(--px)));
+  --preco: max(22px, calc(43 * var(--px)));
+  --foto-fundo: #D9D9D9;                   /* retângulo atrás da foto no Figma */
+
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  /* altura útil: no app de celular o Artifact reserva as áreas seguras em cima e embaixo */
+  --tela: calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { background: var(--fundo); color-scheme: light; }
+body {
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: var(--fonte);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ───────── grão ───────── */
+/* overlay clareia e escurece sem tirar o vermelho. Fica numa camada intermediária (z 1):
+   todo o conteúdo sobe para a camada 2, menos o título da front, que fica embaixo e ganha o grão */
+#grao {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+  opacity: .32;
+}
+
+/* ───────── base de toda página: topo, miolo, ícones no pé ───────── */
+.pagina {
+  min-height: 100vh;
+  min-height: var(--tela);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: var(--topo) var(--gutter) var(--base);
+}
+
+.topo, .contador, .redes, .loja, .compra, .agenda { position: relative; z-index: 2; }
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.logo { display: block; width: var(--logo); }
+.logo img { display: block; width: 100%; height: auto; }
+
+.menu { display: flex; gap: .88em; font-size: var(--menu); letter-spacing: -.017em; line-height: 1; }
+.menu a { transition: opacity .3s var(--ease); }
+.menu a:hover { opacity: .7; }
+.menu { align-items: center; }
+.menu .destaque { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .18em; }
+
+/* sacola no topo: bolsa de traço fino + número de peças, que dá um pulinho quando muda */
+.sacola-link { display: inline-flex; align-items: flex-end; gap: .15em; }
+.sacola-link svg { width: 1.05em; height: 1.05em; display: block; }
+.sacola-n { font-size: .72em; line-height: 1; font-variant-numeric: tabular-nums; min-width: .6em; }
+.sacola-link.pulou svg { animation: pulo .5s var(--ease); }
+@keyframes pulo { 40% { transform: translateY(-4px) scale(1.12); } }
+
+/* ───────── front ───────── */
+.centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-bottom: calc(14 * var(--px)); /* no Figma o bloco fica 10 px acima do meio */
+}
+
+/* título fora de foco; nítido e um pouco mais perto quando o mouse passa */
+.titulo {
+  display: inline-block;
+  font-size: var(--titulo);
+  font-weight: 300;
+  letter-spacing: -.04em;
+  line-height: 1;
+  white-space: nowrap;
+  filter: blur(.017em); /* ~2,4 px no tamanho do Figma: fora de foco, mas lê fácil */
+  opacity: .82;
+  transform: scale(.985);
+  transition: filter 1.1s var(--ease), opacity 1.1s var(--ease), transform 1.1s var(--ease);
+  will-change: filter, transform;
+}
+.titulo a { display: block; cursor: pointer; } /* leva ao pre-save */
+.titulo a:focus-visible { outline: 2px solid var(--tinta); outline-offset: .12em; }
+.titulo:hover,
+.titulo:has(a:focus-visible),
+.titulo.foco {
+  filter: blur(0);
+  opacity: 1;
+  transform: scale(1.035);
+  transition-duration: .7s;
+}
+
+.contador {
+  margin-top: calc(var(--titulo) * .147);   /* 21 px de vão no Figma */
+  font-size: calc(var(--titulo) * .3759);   /* 53,66 / 142,76 */
+  letter-spacing: -.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;       /* os dígitos não dançam a cada segundo */
+}
+
+/* ───────── merch ───────── */
+/* topo e ícones fixos como nas datas: a página não rola, só a loja (ou a compra) entre eles.
+   Na tela do Figma (1440 × 907) o merch cabe inteiro e nada rola; em telas menores rola sozinho */
+.pagina-merch, .pagina-comprar { height: 100vh; height: var(--tela); min-height: 0; overflow: hidden; }
+.pagina-merch .loja, .pagina-comprar .checkout {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+.pagina-merch .loja::-webkit-scrollbar,
+.pagina-comprar .checkout::-webkit-scrollbar { display: none; }
+.loja {
+  /* 73 px até o título; embaixo um pouco menos que os 61 px do Figma para os arredondamentos
+     não passarem 1 px da tela e criarem rolagem (a linha 1fr do grid completa o vão) */
+  padding: calc(73 * var(--px)) 0 calc(52 * var(--px));
+}
+.loja-titulo {
+  font-size: var(--loja);
+  font-weight: 300;
+  letter-spacing: -.017em;
+  line-height: 1;
+}
+.produtos {
+  list-style: none;
+  padding: 0;
+  margin-top: calc(47 * var(--px));
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 9.82%;                        /* 121 de 1232 px: três quadros de 330 */
+  row-gap: 48px;
+}
+.produto a { display: block; }
+
+/* hover: a foto se aproxima devagar e sobe uma etiqueta "comprar" */
+.visor-moldura { position: relative; overflow: hidden; }
+.produto .visor img {
+  transition: opacity 1.4s var(--ease), transform 1.1s var(--ease);
+}
+.produto a:hover .visor img,
+.produto a:focus-visible .visor img { transform: scale(1.06); }
+.etiqueta {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: .45em .8em .5em;
+  background: var(--tinta);
+  color: var(--fundo);
+  font-size: max(12px, calc(15 * var(--px)));
+  line-height: 1;
+  letter-spacing: -.01em;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .45s var(--ease), transform .45s var(--ease);
+}
+.produto a:hover .etiqueta,
+.produto a:focus-visible .etiqueta { opacity: 1; transform: none; }
+.produto-nome, .produto-preco { transition: transform .6s var(--ease); }
+.produto a:hover .produto-nome,
+.produto a:hover .produto-preco { transform: translateX(4px); }
+.produto a:focus-visible { outline: 2px solid var(--tinta); outline-offset: 6px; }
+@media (hover: none) { .etiqueta { opacity: 1; transform: none; } } /* no toque não há hover: etiqueta sempre visível */
+
+/* visualizador: fotos empilhadas, só a .ativa aparece; a troca é um fade cruzado */
+.visor {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--foto-fundo);
+  overflow: hidden;
+}
+.visor img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.4s var(--ease);
+}
+.visor img.ativa { opacity: 1; }
+
+.produto-nome {
+  margin-top: calc(var(--nome) * .885);     /* 23 px abaixo da foto */
+  padding-left: 2px;
+  font-size: var(--nome);
+  letter-spacing: -.017em;
+  line-height: 1;
+}
+.produto-preco {
+  margin-top: calc(var(--nome) * .23);      /* 6 px */
+  font-size: var(--preco);
+  font-weight: 700;
+  letter-spacing: -.017em;
+  line-height: 1;
+}
+
+/* ───────── datas ───────── */
+/* a página não rola: topo, título, placar e ícones ficam parados e só a lista de shows
+   rola, na área entre o título e os ícones (nada passa por baixo do topo) */
+.pagina-datas { height: 100vh; height: var(--tela); min-height: 0; overflow: hidden; }
+.agenda {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: calc(73 * var(--px)) 0 calc(32 * var(--px));
+}
+.agenda-grade {
+  flex: 1;
+  min-height: 0;
+  margin-top: calc(47 * var(--px));
+  display: grid;
+  grid-template-columns: 5fr 6fr;
+  grid-template-rows: 100%;
+  column-gap: calc(86 * var(--px));
+}
+
+/* placar: alinhado ao meio da lista, onde fica o show em foco */
+.agenda-placar {
+  --gigante: max(72px, calc(180 * var(--px)));
+  align-self: center;
+  margin-bottom: 1.4em;
+}
+.placar {
+  display: flex;
+  font-size: var(--gigante);
+  font-weight: 300;
+  letter-spacing: -.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.rolo { display: inline-block; height: 1em; overflow: hidden; }
+.fita { display: flex; flex-direction: column; transition: transform .9s cubic-bezier(.65, 0, .2, 1); transition-delay: calc(var(--i) * 55ms); }
+.fita span { height: 1em; }
+.ponto { display: inline-block; }
+.placar-nota { margin-top: 14px; font-size: var(--nome); letter-spacing: -.017em; min-height: 1.2em; }
+.placar-nota.trocou { animation: surgir .6s var(--ease); }
+
+/* lista: rola sozinha, sem barra, como uma roleta; as bordas somem num degradê e os
+   espaços no começo e no fim deixam o primeiro e o último show chegarem ao meio */
+.shows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  outline: none;
+  -webkit-mask-image: linear-gradient(transparent, #000 6%, #000 82%, transparent);
+  mask-image: linear-gradient(transparent, #000 6%, #000 82%, transparent);
+}
+.shows::-webkit-scrollbar { display: none; }
+.shows::before,
+.shows::after { content: ""; display: block; height: calc(50% - 70px); }
+.show {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "quando acao" "local acao" "cidade acao";
+  column-gap: 24px;
+  padding: 34px 0 36px;
+  border-top: 1px solid rgb(238 233 195 / .5);
+  cursor: pointer;
+  filter: blur(1.6px);
+  opacity: .32;
+  transform: scale(.985);
+  transform-origin: left center;
+  transition: filter .7s var(--ease), opacity .7s var(--ease), transform .7s var(--ease);
+}
+.show:last-child { border-bottom: 1px solid rgb(238 233 195 / .5); }
+.show:hover { opacity: .55; }
+.show.ativo { filter: none; opacity: 1; transform: none; cursor: default; }
+.show-quando { grid-area: quando; font-size: 15px; letter-spacing: .02em; opacity: .8; }
+.show-local { grid-area: local; margin-top: 10px; font-size: max(28px, calc(56 * var(--px))); font-weight: 300; letter-spacing: -.03em; line-height: 1; }
+.show-cidade { grid-area: cidade; margin-top: 8px; font-size: var(--nome); letter-spacing: -.017em; }
+.show-acao { grid-area: acao; align-self: center; }
+.ingresso {
+  display: inline-block;
+  padding: 15px 22px;
+  background: var(--tinta);
+  color: var(--fundo);
+  font-size: max(14px, calc(18 * var(--px)));
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+.ingresso span { display: inline-block; transition: transform .35s var(--ease); }
+.ingresso:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgb(0 0 0 / .12); }
+.ingresso:hover span { transform: translateX(4px); }
+.ingresso:focus-visible { outline: 2px solid var(--tinta); outline-offset: 4px; }
+.ingresso-off { background: none; color: var(--tinta); border: 1px solid var(--tinta); }
+.show.passou .show-local { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* ───────── finalização de compra (simulada) ───────── */
+/* "← merch" fica parado acima da área que rola (só o .checkout rola) */
+.compra { display: flex; flex-direction: column; min-height: 0; padding-top: calc(46 * var(--px)); }
+.voltar { align-self: flex-start; }
+.checkout { flex: 1; padding: calc(37 * var(--px)) 0 calc(58 * var(--px)); }
+.voltar { display: inline-block; font-size: var(--menu); line-height: 1; transition: opacity .3s var(--ease); }
+.voltar:hover { opacity: .7; }
+.checkout-grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: calc(121 * var(--px));
+  align-items: start;
+}
+.checkout-foto { position: sticky; top: 28px; } /* gruda no alto da área que rola, logo abaixo do degradê */
+.checkout-nome { font-size: max(30px, calc(56 * var(--px))); font-weight: 300; letter-spacing: -.03em; line-height: 1; }
+.checkout-preco { margin-top: 10px; font-size: var(--preco); font-weight: 700; letter-spacing: -.017em; line-height: 1; }
+
+.checkout-form, .obrigado { display: flex; flex-direction: column; gap: 30px; font-size: 16px; }
+.checkout-form > .checkout-preco { margin-top: -18px; }
+fieldset { border: 0; padding: 0; min-width: 0; }
+legend, .linha-qtd > span, .campo > span, .resumo dt, .obrigado-numero, .item-detalhe {
+  font-size: 13px; letter-spacing: .02em; opacity: .75;
+}
+legend { margin-bottom: 12px; padding: 0; }
+
+/* tamanho e pagamento: botões de texto com fio, preenchidos quando escolhidos */
+.escolhas { display: flex; flex-wrap: wrap; gap: 8px; }
+.escolhas legend { width: 100%; }
+.escolhas label { position: relative; cursor: pointer; }
+.escolhas input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.escolhas span {
+  display: block;
+  min-width: 48px;
+  padding: 11px 16px;
+  border: 1px solid var(--tinta);
+  text-align: center;
+  line-height: 1;
+  transition: background .25s var(--ease), color .25s var(--ease);
+}
+.escolhas label:hover span { background: rgb(238 233 195 / .15); }
+.escolhas input:checked + span { background: var(--tinta); color: var(--fundo); }
+.escolhas input:focus-visible + span { outline: 2px solid var(--tinta); outline-offset: 3px; }
+.conferido .escolhas:has(input:invalid) span { border-style: dashed; }
+
+.linha-qtd { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.quantidade { display: flex; align-items: center; gap: 14px; }
+.quantidade button {
+  width: 40px; height: 40px;
+  border: 1px solid var(--tinta); background: none; color: inherit;
+  font: inherit; font-size: 20px; line-height: 1; cursor: pointer;
+  transition: background .25s var(--ease), color .25s var(--ease);
+}
+.quantidade button:hover { background: var(--tinta); color: var(--fundo); }
+.quantidade output { min-width: 2ch; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
+
+.dados { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; }
+.dados legend { grid-column: 1 / -1; }
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo.largo { grid-column: 1 / -1; }
+.campo input {
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid rgb(238 233 195 / .55);
+  border-radius: 0;
+  background: none;
+  color: var(--tinta);
+  font: inherit;
+  font-size: 18px;
+  outline: none;
+  transition: border-color .25s var(--ease);
+}
+.campo input::placeholder { color: rgb(238 233 195 / .4); }
+.campo input:focus { border-bottom-color: var(--tinta); }
+.conferido .campo input:invalid { border-bottom: 1px dashed var(--tinta); }
+.conferido .campo:has(input:invalid) > span::after { content: " · confira"; }
+
+.resumo { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid rgb(238 233 195 / .55); }
+.resumo div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.resumo dd { margin: 0; font-variant-numeric: tabular-nums; }
+.resumo .total dt { opacity: 1; font-size: 16px; }
+.resumo .total dd { font-size: var(--preco); font-weight: 700; letter-spacing: -.017em; }
+
+.finalizar {
+  display: block;
+  padding: 20px;
+  border: 0;
+  background: var(--tinta);
+  color: var(--fundo);
+  font: inherit;
+  font-size: max(17px, calc(22 * var(--px)));
+  letter-spacing: -.01em;
+  text-align: center;
+  cursor: pointer;
+  transition: transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+.finalizar:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgb(0 0 0 / .12); }
+.finalizar:focus-visible { outline: 2px solid var(--tinta); outline-offset: 4px; }
+.aviso { margin-top: -14px; font-size: 13px; opacity: .7; }
+
+.obrigado { outline: none; animation: surgir .7s var(--ease); max-width: 640px; }
+
+/* aviso depois de pôr na sacola */
+.adicionado { min-height: 1.4em; margin-top: -10px; font-size: 15px; }
+.adicionado a { text-decoration: underline; text-underline-offset: .18em; white-space: nowrap; }
+.adicionado.surgiu { animation: surgir .5s var(--ease); }
+
+/* sacola: lista de itens à esquerda, entrega e pagamento à direita */
+.itens { list-style: none; padding: 0; margin: 26px 0 0; border-top: 1px solid rgb(238 233 195 / .55); }
+.item {
+  display: grid;
+  grid-template-columns: 84px 1fr auto auto;
+  align-items: center;
+  gap: 14px 22px;
+  padding: 18px 0;
+  border-bottom: 1px solid rgb(238 233 195 / .55);
+  animation: surgir .45s var(--ease);
+}
+.item-foto { display: block; background: var(--foto-fundo); aspect-ratio: 1; overflow: hidden; }
+.item-foto img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
+.item-foto:hover img { transform: scale(1.06); }
+.item-info { min-width: 0; }
+.item-nome { font-size: 18px; letter-spacing: -.01em; line-height: 1.15; }
+.item-detalhe { margin-top: 4px; }
+.item-remover {
+  margin-top: 8px; padding: 0; border: 0; background: none; color: inherit;
+  font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: .2em; cursor: pointer; opacity: .8;
+}
+.item-remover:hover { opacity: 1; }
+.item .quantidade { gap: 10px; }
+.item .quantidade button { width: 32px; height: 32px; font-size: 17px; }
+.item .quantidade output { font-size: 17px; }
+.item-total { min-width: 6.5ch; text-align: right; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sacola-grade { grid-template-columns: 7fr 5fr; column-gap: calc(90 * var(--px)); } /* itens precisam de mais espaço que o formulário */
+.item-detalhe { text-wrap: balance; }
+.sacola-vazia { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; max-width: 520px; }
+.obrigado-texto { font-size: 18px; max-width: 32em; }
+.obrigado-entrega { line-height: 1.5; opacity: .85; }
+@keyframes surgir { from { opacity: 0; transform: translateY(12px); } }
+
+/* ───────── ícones ───────── */
+.redes {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: calc(var(--icone) * 20 / 29);
+}
+.redes a { display: block; transition: opacity .3s var(--ease); }
+.redes a:hover { opacity: .7; }
+.redes svg { display: block; width: calc(var(--icone) * 24 / 29); height: auto; }
+.redes .instagram svg { width: var(--icone); }
+.redes .vazado { fill: var(--fundo); } /* a nota do Apple Music é recortada no fundo */
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ───────── celular ───────── */
+@media (max-width: 760px) {
+  :root { --titulo: clamp(40px, 15vw, 96px); --icone: 26px; }
+  .titulo { white-space: normal; max-width: 7em; }
+  .contador { font-size: calc(var(--titulo) * .5); margin-top: .5em; }
+  .loja { padding: 48px 0 56px; }
+  .produtos { grid-template-columns: 1fr; margin-top: 28px; row-gap: 44px; }
+  .produto-nome { margin-top: 14px; }
+  .compra { padding-top: 28px; }
+  .checkout { padding: 20px 0 48px; }
+  .checkout-grade { grid-template-columns: 1fr; row-gap: 32px; }
+  .checkout-foto { position: static; }
+  .dados { grid-template-columns: 1fr; }
+  .sacola-grade { grid-template-columns: 1fr; }
+  .item { grid-template-columns: 72px 1fr auto; grid-template-areas: "foto info info" "foto qtd total"; gap: 10px 16px; }
+  .item-foto { grid-area: foto; align-self: start; }
+  .item-info { grid-area: info; }
+  .item .quantidade { grid-area: qtd; }
+  .item-total { grid-area: total; }
+  .menu { gap: .7em; }
+  /* no celular o placar sai; a data já está em cada show e o foco da rolagem continua */
+  .agenda { padding: 28px 0 16px; }
+  .agenda-grade { grid-template-columns: 1fr; margin-top: 16px; }
+  .agenda-placar { display: none; }
+  .show { grid-template-areas: "quando" "local" "cidade" "acao"; grid-template-columns: 1fr; padding: 26px 0 28px; }
+  .show-acao { margin-top: 18px; justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .titulo, .titulo:hover { transition: none; filter: none; opacity: 1; transform: none; }
+  .visor img, .produto .visor img, .etiqueta, .produto-nome, .produto-preco { transition: none; }
+  .produto a:hover .visor img { transform: none; }
+  .obrigado, .item, .adicionado.surgiu { animation: none; }
+  .sacola-link.pulou svg { animation: none; }
+  .fita, .show { transition: none; }
+  .show { filter: none; }
+  .placar-nota.trocou { animation: none; }
+}
+.estatico .titulo { transition: none; filter: none; opacity: 1; transform: none; }
+.estatico .show { filter: none; transition: none; }

@@ -1,0 +1,8 @@
+# gerado por build/artifact.py (versão para publicar no claude.ai)
+build/artifact.html
+build/files.json
+# capturas e lixo do sistema
+tiros/
+__pycache__/
+Thumbs.db
+.DS_Store
